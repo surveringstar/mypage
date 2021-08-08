@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <meta name="keywords" content="天地图"/>
+    <title>天地图－地图API－范例－多个标注点沿直线的轨迹运动</title>
+    <script type="text/javascript" src="http://api.tianditu.gov.cn/api?v=4.0&tk=8d8752ddc3761d3ed72cf1aefc7729ee"></script>
+    <script src="http://lbs.tianditu.gov.cn/js/lib/jquery/jquery-1.7.2.min.js"></script>
+    <script src="http://cdn.bootcss.com/d3/3.5.17/d3.js " charset="utf-8"></script>
+    <script src="http://lbs.tianditu.gov.cn/api/js4.0/opensource/openlibrary/D3SvgOverlay.js"></script>
+    <script src="http://lbs.tianditu.gov.cn/api/js4.0/opensource/openlibrary/CarTrack.js"></script>
+
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=pdjSZvkWsYTqCiFr1pzaG2cp9G2CmVhR"></script>
+    <style type="text/css">
+        body, html{width: 100%;height: 100%;margin:0;font-family:"微软雅黑";}
+        #mapDiv{width:100%;height:100%;position:absolute;left: 0px;top:0px;}
+        #panorama{width:50%;height:100%;position:absolute;right:0px;top:0px;}
+    </style>
+    
+</head>
+<body onLoad="onLoad()">
+<div id="mapDiv"></div>
+<div id="panorama"></div>
+<script>
+    var map, drivingRoute, drivingRoute1;
+    var zoom = 13;
+    var _CarTrack;
+    var startIcon = "http://lbs.tianditu.gov.cn/images/bus/start.png";	//起点图标
+    var endIcon = "http://lbs.tianditu.gov.cn/images/bus/end.png";		//终点图标
+    var mid = "http://lbs.tianditu.gov.cn/images/driving/routeWayPoint.png";
+    var index=1;
+    var mid1;
+
+    //注册标记点
+    var startMarker_A; //A路线起点
+    var midMarker1_A; //A路线途经点
+    var endMarker_A; //A路线终点
+
+    var startMarker_B; //A路线起点
+    var endMarker_B; //A路线终点
+
+    var bool=false;
+
+    var markerInfoWin;
+
+    var html = [];     
+    html.push("	<div>");
+    html.push("<img id='panogif' class='showModel'  src='https://webmap1.bdimg.com/wolfman/static/pano/images/pano_whole/pano_loading_24c94ab.gif'/>");
+    html.push("	</div>");
+
+
+    function sleep(n) {
+        var start = new Date().getTime();
+        //  console.log('休眠前：' + start);
+        while (true) {
+            if (new Date().getTime() - start > n) {
+                break;
+            }
+        }
+        // console.log('休眠后：' + new Date().getTime());
+    }
+
+
+
+
+    //鼠标从图标移动出去的时候执行
+    function onClose() {
+        clearTimeout(timer);      
+        sleep(500);
+        map.removeOverLay(markerInfoWin);
+    }
+
+
+    function openpano(point){
+            var ww=document.documentElement.clientWidth;
+            var hh=document.documentElement.clientHeight;
+            var panorama = new BMap.Panorama('panorama'); 
+            //开启全景窗口
+            if(bool==false){
+                if(ww>hh)
+                {
+                    document.getElementById("mapDiv").style.width="50%";
+                    document.getElementById("mapDiv").style.height="100%";
+                    document.getElementById("mapDiv").style.position="absolute";
+                    document.getElementById("mapDiv").style.left="0px";
+
+
+                    document.getElementById("panorama").style.display="block";
+                    document.getElementById("panorama").style.width="50%";
+                    document.getElementById("panorama").style.height="100%";
+                    document.getElementById("panorama").style.position="absolute";
+                    document.getElementById("panorama").style.right="0px";
+                    map.centerAndZoom(point, zoom);
+                    // map.panTo(new T.LngLat(113.53609268,22.12902680), zoom);
+                    map.panBy(new T.Point(150,0),zoom);
+                }
+                else{
+
+                    document.getElementById("mapDiv").style.width="100%";
+                    document.getElementById("mapDiv").style.height="50%";
+                    document.getElementById("mapDiv").style.position="absolute";
+
+                    document.getElementById("mapDiv").style.top="0px";
+                    // document.getElementById("mapDiv").style.display="none";
+
+
+                    document.getElementById("panorama").style.display="block";
+                    document.getElementById("panorama").style.width="100%";
+                    document.getElementById("panorama").style.height="50%";
+                    document.getElementById("panorama").style.position="absolute";
+
+                    document.getElementById("panorama").style.bottom="0px";
+                    map.centerAndZoom(point, zoom);
+                    map.panBy(new T.Point(0,80),zoom);
+                }
+
+
+                //heading	水平方向的角度，正北方向为0，正东为90，正南为180，正西为270
+                //pitch   竖直方向的角度，向上最大到90度，向下最大到-90度。
+                
+                panorama.setPov({pitch: 26,  heading: 180});
+                panorama.setPosition(new BMap.Point(113.547538,22.132728)); //根据经纬度坐标展示全景图    
+
+
+
+                // var labelPosition = new BMap.Point(113.547538,22.132728);
+                // var labelOptions = {
+                //     position: labelPosition,
+                //     altitude: 2
+                // };//设置标注点的经纬度位置和高度
+                // var label = new BMap.PanoramaLabel('自定义标注', labelOptions);
+                // panorama.addOverlay(label);//在全景地图里添加该标注
+                // panorama.setPov(label.getPov()); //修改点的视角，朝向该label
+
+                // label.addEventListener('click', function() { //给标注点注册点击事件
+                //     panorama.setPov({  //修改点的视角
+                //     pitch: 26, 
+                //     heading: 180
+                //     });
+                // });
+
+
+
+            //   function() { //给标注点注册点击事件
+
+                // }
+
+
+
+
+                bool=true;
+            }
+            //关闭全景窗口
+            else{
+                map.removeOverLay(markerInfoWin);
+                document.getElementById("panorama").style.display="none";
+                if(ww>hh){
+                    document.getElementById("mapDiv").style.width="100%";
+                }
+                else{
+                    document.getElementById("mapDiv").style.height="100%";
+                }
+                bool=false;              
+                map.centerAndZoom(new T.LngLat(113.53609268,22.12902680), zoom);
+                document.getElementById("panorama").innerHTML="";
+            }
+            // if(labelclickregister)
+            //     {labelclick.removeEventListener("click",f1);labelclickregister=false;}   
+
+ 
+
+// window.open("https://map.qq.com/#pano=10061047150614094554900&heading=161&pitch=20&zoom=1");
+// window.open("https://map.baidu.com/@12646517.49,2640037.28,21z,87t,65.46h#panoid=09004800011601130923095478W&panotype=street&heading=294.53&pitch=0&l=21&tn=B_NORMAL_MAP&sc=0&newmap=1&shareurl=1&pid=09004800011601130923095478W");
+    // map.removeOverLay(markerInfoWin);
+        }
+
+
+
+
+    function onMouseOver(e){
+            var point = e.lnglat;
+            markerInfoWin = new T.InfoWindow("",{offset:new T.Point(0,-30),closeButton:false}); // 创建信息窗口对象
+            markerInfoWin.setContent(html.join(''));
+            map.openInfoWindow(markerInfoWin,point); //开启信息窗口
+            //document.getElementById("panogif").onclick=f1;
+            
+            var panoimg = document.getElementById("panogif");
+            //弹出窗口后，注册单击事件
+
+            // labelclick.addEventListener("click",f1);
+
+
+
+
+            //带参函数要用onclick
+            panoimg.onclick= function () {
+                openpano(point); // pass param but not be executed
+            };
+
+
+                // labelclickregister=true;
+
+            // markerInfoWin.addEventListener(clo);
+        }
+
+
+
+
+
+
+    function AddMarkerEvent(marker){
+
+        marker.addEventListener("mouseover",function(e){
+                       timer = setTimeout(mover, 50);//等半秒，再打开
+                       function mover() {
+                        onMouseOver(e);
+                       }
+                    }
+            );                
+        //移走关闭
+        marker.addEventListener("mouseout",onClose);
+    }
+
+    function onLoad() {
+        map = new T.Map('mapDiv');
+
+        document.getElementById("mapDiv").style.width="100%";
+        document.getElementById("mapDiv").style.height="100%";
+        document.getElementById("mapDiv").style.position="absolute";
+        document.getElementById("mapDiv").style.left="0px";
+        document.getElementById("mapDiv").style.top="0px";
+        document.getElementById("panorama").style.display="none";
+
+        //放在控件加载设置之后
+        map.centerAndZoom(new T.LngLat(113.51,22.12), zoom);
+
+
+
+
+        
+        var config = {
+            policy: 0,	//驾车策略
+            onSearchComplete: searchResult	//检索完成后的回调函数
+        };
+
+        drivingRoute = new T.DrivingRoute(map, config);
+
+        searchDrivingRoute();
+
+
+
+        index=2;
+        var config1 = {
+            policy: 0,	//驾车策略
+            onSearchComplete: searchResult1	//检索完成后的回调函数
+        };
+
+        drivingRoute1 = new T.DrivingRoute(map, config1);
+        searchDrivingRoute1();
+
+    }
+
+    function searchDrivingRoute() {
+        map.clearOverLays();
+        var startLngLat = new T.LngLat(113.53609268,22.12902680);
+        var endLngLat = new T.LngLat(113.48303457, 22.14345649);
+
+        mid1 = new T.LngLat(113.50077604, 22.12033998);
+
+
+        //驾车路线搜索
+        drivingRoute.search(startLngLat, endLngLat,[mid1]);
+    }
+    function searchDrivingRoute1() {
+        
+        var startLngLat1 = new T.LngLat(113.49544917,22.09811071);
+        var endLngLat1 = new T.LngLat(113.50078140, 22.12001508);
+        
+        //驾车路线搜索
+        drivingRoute1.search(startLngLat1, endLngLat1);
+    }
+
+    function createRoute(lnglats, lineColor) {
+            var _CarTrack = new T.CarTrack(map, {
+            interval: 20,
+            speed: 10,
+            dynamicLine: false,
+            Datas: lnglats,
+            polylinestyle: {color: "#2C64A7", width: 5, opacity: 0.9}
+        })
+        _CarTrack.start()
+    }
+    function createRoute1(lnglats, lineColor) {
+
+            var _CarTrack = new T.CarTrack(map, {
+            interval: 20,
+            speed: 10,
+            dynamicLine: false,
+            Datas: lnglats,
+            polylinestyle: {color: "#008B8B", width: 5, opacity: 0.9}
+        })
+        _CarTrack.start()
+    }
+    
+    // function createRoute(lnglats, lineColor) {
+    //     //创建线对象
+    //     var line = new T.Polyline(lnglats, {color: "#00FFFF", weight: 5, opacity: 0.9});
+    //     //向地图上添加线
+    //     map.addOverLay(line);
+    // }
+
+
+    //添加起始点
+    function createStartMarker(result) {
+        startMarker_A = new T.Marker(result.getStart(), {
+            icon: new T.Icon({
+                iconUrl: startIcon,
+                iconSize: new T.Point(44, 34),
+                iconAnchor: new T.Point(12, 31)
+            })
+        });
+        map.addOverLay(startMarker_A);
+        endMarker_A = new T.Marker(result.getEnd(), {
+            icon: new T.Icon({
+                iconUrl: endIcon,
+                iconSize: new T.Point(44, 34),
+                iconAnchor: new T.Point(12, 31)
+            })
+        });
+        map.addOverLay(endMarker_A);
+        midMarker1_A = new T.Marker(mid1, {
+            icon: new T.Icon({
+                iconUrl: mid,
+                iconSize: new T.Point(22, 23),
+                iconAnchor: new T.Point(12, 23)
+            })
+        });
+        map.addOverLay(midMarker1_A);
+
+
+
+        AddMarkerEvent(startMarker_A);
+    }
+    
+
+    //添加起始点
+    function createStartMarker1(result) {
+        startMarker_B = new T.Marker(result.getStart(), {
+            icon: new T.Icon({
+                iconUrl: startIcon,
+                iconSize: new T.Point(44, 34),
+                iconAnchor: new T.Point(12, 31)
+            })
+        });
+        map.addOverLay(startMarker_B);
+        endMarker_B = new T.Marker(result.getEnd(), {
+            icon: new T.Icon({
+                iconUrl: endIcon,
+                iconSize: new T.Point(44, 34),
+                iconAnchor: new T.Point(12, 31)
+            })
+        });
+        map.addOverLay(endMarker_B);
+    }
+
+    function searchResult(result) {
+        //添加起始点
+        createStartMarker(result);
+        obj = result;
+        //获取方案个数
+        var routes = result.getNumPlans();
+        for (var i = 0; i < routes; i++) {
+            //获得单条驾车方案结果对象
+            var plan = result.getPlan(i);
+            // if(index==1)
+                createRoute(plan.getPath());
+        }
+    }
+    function searchResult1(result) {
+        //添加起始点
+        createStartMarker1(result);
+        obj = result;
+        //获取方案个数
+        var routes = result.getNumPlans();
+        for (var i = 0; i < routes; i++) {
+            //获得单条驾车方案结果对象
+            var plan = result.getPlan(i);
+            // if(index==1)
+                createRoute1(plan.getPath());
+
+
+
+        }
+    }
+
+</script>
+</body>
+</html>
